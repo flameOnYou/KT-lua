@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "windows.h": "c",
+        "mlualib.h": "c",
+        "编译指令": "cpp",
+        "stdio.h": "c"
+    }
+}

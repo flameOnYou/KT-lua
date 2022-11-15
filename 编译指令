@@ -1,0 +1,10 @@
+g++ -c -DBUILD_DLL mLualib.c -m32
+g++ -shared -o mLualib.dll mLualib.o -Wl,--kill-at,--out-implib,libmLualib.a E:\MinGW\lib\liblua.a -m32
+
+// 原版编译指令
+g++  *.c -o mLualib.dll -shared -static -fPIC -O3 -Wl,--kill-at 
+
+g++  *.cpp -o FxjFunc.dll -shared -static -fPIC -O3 -Wl,--kill-at,--out-implib,libmydll.a
+
+// new
+g++  *.c -o C:\KT\FmlDll\mLualib.dll -shared -static -fPIC -O3 -Wl,--kill-at,--out-implib,libmLualib.a E:\MinGW\lib\liblua.a -m32
