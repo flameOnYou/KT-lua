@@ -4,7 +4,7 @@
 #include <iostream>
 #include "log.h"
 
-using namespace ::std;
+using namespace std;
 extern "C"
 {
 #include "lua.h"
@@ -27,7 +27,7 @@ static int luaLog(lua_State *L)
 
 lua_State *g_L = NULL;
 
-bool initlua(CALCINFO *pData)
+int initlua(CALCINFO *pData)
 {
     g_L = luaL_newstate(); //创建Lua栈
 
@@ -36,7 +36,7 @@ bool initlua(CALCINFO *pData)
     luaL_openlibs(g_L); //运行Lua虚拟机
 
     // 注册C函数
-    lua_register(g_L, "luaLog", luaLog);
+    lua_register(g_L, "LOG", luaLog);
 
     int ret;
     double number = 0.0;
@@ -50,7 +50,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                   //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "times_arr");
+    lua_setglobal(g_L, "timeArr");
     // 设置时间数组 end
 
     // 设置开盘数组
@@ -62,7 +62,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                    //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "open_arr");
+    lua_setglobal(g_L, "openArr");
     // 设置开盘数组 end
 
     // 设置最高价数组
@@ -74,7 +74,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                    //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "high_arr");
+    lua_setglobal(g_L, "highArr");
     // 设置最高价数组 end
 
     // 设置最低价数组
@@ -86,7 +86,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                   //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "low_arr");
+    lua_setglobal(g_L, "lowArr");
     // 设置最低价数组 end
 
     // 设置收盘价数组
@@ -98,7 +98,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                     //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "close_arr");
+    lua_setglobal(g_L, "closeArr");
     // 设置收盘价数组 end
 
     // 设置成交量数组
@@ -110,7 +110,7 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                      //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "vol_arr");
+    lua_setglobal(g_L, "volArr");
     // 设置成交量数组 end
 
     // 设置成交额数组
@@ -122,13 +122,30 @@ bool initlua(CALCINFO *pData)
         lua_rawseti(g_L, -2, i + 1);                      //对应key-val
     }
     // stack->lua，将数组赋值到lua中，并弹出数组
-    lua_setglobal(g_L, "amount_arr");
+    lua_setglobal(g_L, "amountArr");
     // 设置成交额数组 end
+    
+    // string s1 = "./Lua/LuaScript";
+	// string s2 = "World! ";
+    
+    // 文件名
+    float f = *pData->m_pfParam1;
+    // LOGC("LOG_DEBUG", "File Name %d", (int)f);
 
-    if (ret = luaL_loadfile(g_L, "./FmlDll/test.lua")) //装载lua脚本
+    char *filestart = "./Lua/LuaScript_";
+    int fileSeq = (int)f;
+    char *fileEnd = ".lua";
+
+    char *luaScriptPath = new char[strlen(filestart) + sizeof(fileSeq) + strlen(fileEnd)];
+    sprintf(luaScriptPath, "%s%d%s", filestart, fileSeq, fileEnd);
+
+
+    LOGC("LOG_DEBUG", "luaScriptPath  %s", luaScriptPath);
+
+    if (ret = luaL_loadfile(g_L, luaScriptPath)) //装载lua脚本
     {
         cout << "load test.lua fail." << ret << endl;
-        return false;
+        return -1;
     }
     else
     {
@@ -137,15 +154,15 @@ bool initlua(CALCINFO *pData)
         {
             cout << "run test.lua fail..." << lua_tostring(g_L, -1) << endl;
 
-            return false;
+            return -1;
         }
         else
         {
             // 从lua中取出全局的值
-            lua_getglobal(g_L, "VALID_SART");
-            int VALID_SART = lua_tonumber(g_L, -1);
+            lua_getglobal(g_L, "pResultBufStartPos");
+            int pResultBufStartPos = lua_tonumber(g_L, -1);
             lua_pop(g_L, 1);
-            LOGC("LOG_DEBUG", "Lua Return Value %d", VALID_SART);
+            LOGC("LOG_DEBUG", "Lua Return Value %d", pResultBufStartPos);
 
             // cout<<"run test.lua ok"<<endl;
             LOGC("LOG_DEBUG", "run test.lua ok");
@@ -153,7 +170,7 @@ bool initlua(CALCINFO *pData)
             // 取出一个数组
 
             // lua->stack，得到全局数组，位置-1
-            lua_getglobal(g_L, "global_c_read_array");
+            lua_getglobal(g_L, "pResultBuf");
 
             int index = lua_gettop(g_L); //获取Lua栈顶的内容的索引值
 
@@ -161,18 +178,22 @@ bool initlua(CALCINFO *pData)
 
             if (lua_isnil(g_L, index)) //栈顶内容为空
             {
-                return false;
+                return -1;
             }
+
+            int j = 0;
+
             while (lua_next(g_L, index)) //循环遍历栈中内容
             {
                 // cout<<lua_tonumber(g_L, -1)<<" ";//取出栈顶内容
                 number = lua_tonumber(g_L, -1);
                 LOGC("LOG_DEBUG", "global_c_read_array  Value: %f", number);
-
+                pData->m_pResultBuf[j] = number; //平均
                 lua_pop(g_L, 1); //弹出栈顶内容，然后下一个数据处在栈顶
+                j++;
             }
 
-            return true;
+            return pResultBufStartPos;
         }
     }
 }
@@ -227,37 +248,39 @@ __declspec(dllexport) int WINAPI2 MYMACLOSE(CALCINFO *pData)
 
     LOGC("LOG_DEBUG", "a=%d", 10);
     //    return 0;
-    if (initlua(pData)) //装载test.lua脚本
-    {
+    // if () //装载test.lua脚本
+    // {
 
-        // call_iface(pData); //调用test.lua脚本中提供的函数
-        // LOG("run lua success %d ",1);
-        // DWORD dwPid = ::GetCurrentProcessId();
-        // DP0("[LYSM] Lying Simon tells the lie that he loves you so much.");
-    }
-    else
-    {
-        LOGC("LOG_DEBUG", "init Lua Failed");
-    }
+    //     // call_iface(pData); //调用test.lua脚本中提供的函数
+    //     // LOG("run lua success %d ",1);
+    //     // DWORD dwPid = ::GetCurrentProcessId();
+    //     // DP0("[LYSM] Lying Simon tells the lie that he loves you so much.");
+    // }
+    // else
+    // {
+    //     LOGC("LOG_DEBUG", "init Lua Failed");
+    // }
 
-    float f, fTotal;
-    int nPeriod, i, j;
-    if (pData->m_pfParam1 &&      //参数1有效
-        pData->m_nParam1Start < 0 //参数1为常数
-                                  // && pData->m_pfParam2==NULL          //仅有一个参数
-    )
-    {
-        f = *pData->m_pfParam1;
-        nPeriod = (int)f; //参数1
+    // float f, fTotal;
+    // int nPeriod, i, j;
+    // if (pData->m_pfParam1 &&      //参数1有效
+    //     pData->m_nParam1Start < 0 //参数1为常数
+    //                               // && pData->m_pfParam2==NULL          //仅有一个参数
+    // )
+    // {
+    //     f = *pData->m_pfParam1;
+    //     nPeriod = (int)f; //参数1
 
-        for (i = nPeriod - 1; i < pData->m_nNumData; i++) //计算nPeriod周期的均线,数据从nPeriod-1开始有效
-        {
-            fTotal = 0.0f;
-            for (j = 0; j < nPeriod; j++) //累加
-                fTotal += pData->m_pData[i - j].m_fClose;
-            pData->m_pResultBuf[i] = fTotal / nPeriod; //平均
-        }
-        return nPeriod - 1;
-    }
-    return -1;
+    //     for (i = nPeriod - 1; i < pData->m_nNumData; i++) //计算nPeriod周期的均线,数据从nPeriod-1开始有效
+    //     {
+    //         fTotal = 0.0f;
+    //         for (j = 0; j < nPeriod; j++) //累加
+    //             fTotal += pData->m_pData[i - j].m_fClose;
+    //         pData->m_pResultBuf[i] = fTotal / nPeriod; //平均
+    //     }
+    //     return nPeriod - 1;
+    // }
+    // return -1;
+    int result = initlua(pData);
+    return result;
 }
